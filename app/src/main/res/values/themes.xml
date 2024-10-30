@@ -1,0 +1,10 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.Calculator" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:colorBackground">@color/white</item>
+        <item name="colorPrimary">@color/primaryTransparent</item>
+        <item name="colorOnPrimary">#006400</item>
+        <item name="colorSecondary">#008080</item>
+    </style>
+
+    <style name="Theme.Calculator" parent="Base.Theme.Calculator"></style>
+</resources>
