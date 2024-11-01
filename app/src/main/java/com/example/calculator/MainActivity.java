@@ -13,12 +13,17 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import net.objecthunter.exp4j.Expression;
@@ -26,22 +31,27 @@ import net.objecthunter.exp4j.ExpressionBuilder;
 
 public class MainActivity extends AppCompatActivity {
     Vibrator vibrator;
+    RecyclerView historyRecyclerView;
+    HistoryAdapter historyAdapter;
+    ConstraintLayout history;
+    Button clearHistoryButton;
+    private List<CalculationHistory> historyList = new ArrayList<>();
 
     EditText input;
     TextView result;
+    Button historyButton;
     Button backspaceButton;
     Button button1; // clearAll
     Button button2; // Parentheses
     Button button3; // percent
-    Button button5, button6, button7, button9, button10, button11, button13, button14, button15, button18; // Numpad
+    Button[] digitButtons;
     Button button4, button8, button12, button16; // operations
     Button button17; // toggle positivity :) -> :( -> :)
     Button button19; // point
     Button button20; // equals
 
-    private static final Set<Character> operators = new HashSet<Character>(Arrays.asList('÷', '×', '-', '+'));
+    final Set<Character> operators = new HashSet<Character>(Arrays.asList('÷', '×', '-', '+'));
     Integer openParenthesesCount = 0;
-
 
     @Override
     protected void onResume() { // Request focus on the root layout to avoid focusing the EditText by default
@@ -65,6 +75,11 @@ public class MainActivity extends AppCompatActivity {
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
         findViewByIdOfAllElements();
+
+        historyRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        historyAdapter = new HistoryAdapter(this, historyList);
+        historyRecyclerView.setAdapter(historyAdapter);
 
         setButtonClickListeners();
         setButtonTouchListeners();
@@ -134,7 +149,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return result.getText().toString();
     }
-
 
     private void clearAll() {
         input.setText("0");
@@ -237,10 +251,19 @@ public class MainActivity extends AppCompatActivity {
         String resultText = result.getText().toString();
         if (!hasTwoOrMoreNumbers(input.getText().toString()) || resultText == "") return;
 
+        addToHistory(input.getText().toString(), resultText);
+
         input.setText(resultText);
         result.setVisibility(View.INVISIBLE);
         openParenthesesCount = 0;
         focusInput();
+    }
+
+    private void addToHistory(String expression, String result) {
+        CalculationHistory calculationHistory = new CalculationHistory(expression, result);
+        historyList.add(calculationHistory);
+        historyAdapter.notifyItemInserted(historyList.size() - 1);
+        historyRecyclerView.scrollToPosition(historyList.size() - 1); // Scroll to the latest entry
     }
 
     private boolean isLastFloatNumber() {
@@ -308,27 +331,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void findViewByIdOfAllElements() {
+        historyRecyclerView = findViewById(R.id.historyRecyclerView);
+        clearHistoryButton = findViewById(R.id.clearHistoryButton);
+
         input = findViewById(R.id.input);
         result = findViewById(R.id.result);
 
+        history = findViewById(R.id.history);
+
+        historyButton = findViewById(R.id.historyButton);
         backspaceButton = findViewById(R.id.backspaceButton);
 
         button1 = findViewById(R.id.button1);
 
         button2 = findViewById(R.id.button2);
         button3 = findViewById(R.id.button3);
-        button5 = findViewById(R.id.button5);
-        button6 = findViewById(R.id.button6);
-        button7 = findViewById(R.id.button7);
-        button9 = findViewById(R.id.button9);
-        button10 = findViewById(R.id.button10);
-        button11 = findViewById(R.id.button11);
-        button13 = findViewById(R.id.button13);
-        button14 = findViewById(R.id.button14);
-        button15 = findViewById(R.id.button15);
+
+        digitButtons = new Button[]{
+                findViewById(R.id.button18),
+                findViewById(R.id.button5),
+                findViewById(R.id.button6),
+                findViewById(R.id.button7),
+                findViewById(R.id.button9),
+                findViewById(R.id.button10),
+                findViewById(R.id.button11),
+                findViewById(R.id.button13),
+                findViewById(R.id.button14),
+                findViewById(R.id.button15)
+        };
 
         button17 = findViewById(R.id.button17);
-        button18 = findViewById(R.id.button18);
         button19 = findViewById(R.id.button19);
         button20 = findViewById(R.id.button20);
 
@@ -338,7 +370,19 @@ public class MainActivity extends AppCompatActivity {
         button16 = findViewById(R.id.button16);
     }
 
+    private void toggleHistoryVisibility() {
+        if (history.getVisibility() == View.GONE)
+            history.setVisibility(View.VISIBLE);
+        else history.setVisibility(View.GONE);
+    }
+
     private void setButtonClickListeners() {
+        clearHistoryButton.setOnClickListener(v -> {
+            historyList.clear();
+            historyAdapter.notifyDataSetChanged();
+        });
+
+        historyButton.setOnClickListener(v -> toggleHistoryVisibility());
         backspaceButton.setOnClickListener(v -> clearLast());
 
         button1.setOnClickListener(v -> clearAll());
@@ -346,16 +390,10 @@ public class MainActivity extends AppCompatActivity {
         button2.setOnClickListener(v -> inputParentheses());
         button3.setOnClickListener(v -> inputPercent());
 
-        button5.setOnClickListener(v -> inputNumber("1"));
-        button6.setOnClickListener(v -> inputNumber("2"));
-        button7.setOnClickListener(v -> inputNumber("3"));
-        button9.setOnClickListener(v -> inputNumber("4"));
-        button10.setOnClickListener(v -> inputNumber("5"));
-        button11.setOnClickListener(v -> inputNumber("6"));
-        button13.setOnClickListener(v -> inputNumber("7"));
-        button14.setOnClickListener(v -> inputNumber("8"));
-        button15.setOnClickListener(v -> inputNumber("9"));
-        button18.setOnClickListener(v -> inputNumber("0"));
+        for (int i = 0; i < 10; i++) {
+            final int number = i;
+            digitButtons[i].setOnClickListener(v -> inputNumber(String.valueOf(number)));
+        }
 
         button17.setOnClickListener(v -> togglePositivity());
         button19.setOnClickListener(v -> inputPoint());
@@ -377,7 +415,19 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        backspaceButton.setOnTouchListener((v, event) -> {
+        historyButton.setOnTouchListener((View v, MotionEvent event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    vibrate();
+                    return false;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    return false;
+            }
+            return false;
+        });
+
+        backspaceButton.setOnTouchListener((View v, MotionEvent event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     vibrate();
@@ -397,16 +447,9 @@ public class MainActivity extends AppCompatActivity {
         button2.setOnTouchListener(this::handleTouchEvent);
         button3.setOnTouchListener(this::handleTouchEvent);
 
-        button5.setOnTouchListener(this::handleTouchEvent);
-        button6.setOnTouchListener(this::handleTouchEvent);
-        button7.setOnTouchListener(this::handleTouchEvent);
-        button9.setOnTouchListener(this::handleTouchEvent);
-        button10.setOnTouchListener(this::handleTouchEvent);
-        button11.setOnTouchListener(this::handleTouchEvent);
-        button13.setOnTouchListener(this::handleTouchEvent);
-        button14.setOnTouchListener(this::handleTouchEvent);
-        button15.setOnTouchListener(this::handleTouchEvent);
-        button18.setOnTouchListener(this::handleTouchEvent);
+        for (int i = 0; i < 10; i++) {
+            digitButtons[i].setOnTouchListener(this::handleTouchEvent);
+        }
 
         button17.setOnTouchListener(this::handleTouchEvent);
         button19.setOnTouchListener(this::handleTouchEvent);
@@ -444,10 +487,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void animateScale(View view, float scale) {
         view.animate()
-            .scaleX(scale)
-            .scaleY(scale)
-            .setDuration(50)
-            .start();
+                .scaleX(scale)
+                .scaleY(scale)
+                .setDuration(50)
+                .start();
     }
 
     private void vibrate() {

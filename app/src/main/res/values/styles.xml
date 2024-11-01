@@ -11,8 +11,7 @@
         <item name="backgroundTint">?attr/colorSecondary</item>
     </style>
 
-    <style name="BackspaceButtonStyle" parent="Widget.AppCompat.Button">
-        <item name="android:background">@drawable/baseline_backspace_24</item>
+    <style name="MenuButtonStyle" parent="Widget.AppCompat.Button">
         <item name="backgroundTint">?attr/colorSecondary</item>
     </style>
 </resources>
