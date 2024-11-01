@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,6 +20,9 @@ import androidx.core.view.WindowInsetsCompat;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
+import net.objecthunter.exp4j.Expression;
+import net.objecthunter.exp4j.ExpressionBuilder;
 
 public class MainActivity extends AppCompatActivity {
     Vibrator vibrator;
@@ -66,9 +70,75 @@ public class MainActivity extends AppCompatActivity {
         setButtonTouchListeners();
     }
 
+    private boolean hasTwoOrMoreNumbers(String input) {
+        int numberCount = 0;
+        boolean inNumber = false;
+
+        for (int i = 0; i < input.length(); i++) {
+            char currentChar = input.charAt(i);
+
+            if (Character.isDigit(currentChar) || currentChar == '.') {
+                if (!inNumber) {
+                    numberCount++;
+                    inNumber = true;
+                }
+            } else inNumber = false;
+
+            if (numberCount >= 2) return true;
+        }
+        return false;
+    }
+
+    private String getResult() {
+        String inputText = input.getText().toString();
+
+        if (hasTwoOrMoreNumbers(inputText))
+            result.setVisibility(View.VISIBLE);
+        else {
+            result.setVisibility(View.INVISIBLE);
+            return "";
+        }
+
+        try {
+            StringBuilder modifiedExpression = new StringBuilder();
+
+            for (int i = 0; i < inputText.length(); i++) {
+                char currentChar = inputText.charAt(i);
+                if (currentChar == '÷') modifiedExpression.append('/');
+                else if (currentChar == '×') modifiedExpression.append('*');
+                else modifiedExpression.append(currentChar);
+            }
+
+            int openParanthesesEnd = 0;
+            for (int i = inputText.length() - 1; i > 0; i--) {
+                if (inputText.charAt(i) == '(') openParanthesesEnd++;
+                else if (!operators.contains(inputText.charAt(i))) break;
+                modifiedExpression.deleteCharAt(i);
+            }
+
+            for (int i = 0; i < openParenthesesCount - openParanthesesEnd; i++)
+                modifiedExpression.append(')');
+
+            String expressionStr = modifiedExpression
+                    .toString()
+                    .replaceAll("(\\([^()]*\\)|\\d+(?:\\.\\d+)?)%", "($1/100.0)");
+
+            Expression expression = new ExpressionBuilder(expressionStr).build();
+            double result = expression.evaluate();
+
+            if (result == (long) result)
+                return String.valueOf((long) result);
+            else return String.valueOf(result);
+        } catch (Exception e) {
+            Toast.makeText(this, "Something went wrong :/\n" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+        return result.getText().toString();
+    }
+
+
     private void clearAll() {
         input.setText("0");
-        result.setText("");
+        result.setVisibility(View.INVISIBLE);
         openParenthesesCount = 0;
         focusInput();
     }
@@ -87,6 +157,7 @@ public class MainActivity extends AppCompatActivity {
             openParenthesesCount = 0;
         }
         input.setText(inputText);
+        result.setText(getResult());
         focusInput();
     }
 
@@ -95,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
         Character last = inputText.charAt(inputText.length() - 1);
         if (last.equals(')') || last.equals('%')) input.setText(inputText + "×" + num);
         else input.setText(inputText.equals("0") ? num : inputText + num);
+        result.setText(getResult());
         focusInput();
     }
 
@@ -112,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
                 || operator == '-')
             input.setText(inputText + operator);
 
+        result.setText(getResult());
         focusInput();
     }
 
@@ -139,6 +212,7 @@ public class MainActivity extends AppCompatActivity {
                 openParenthesesCount++;
             }
         }
+        result.setText(getResult());
         focusInput();
     }
 
@@ -147,6 +221,7 @@ public class MainActivity extends AppCompatActivity {
         Character last = inputText.charAt(inputText.length() - 1);
         if (Character.isDigit(last) || last == ')')
             input.setText(inputText + "%");
+        result.setText(getResult());
         focusInput();
     }
 
@@ -154,6 +229,17 @@ public class MainActivity extends AppCompatActivity {
         String inputText = input.getText().toString();
         if (!isLastFloatNumber() && Character.isDigit(inputText.charAt(inputText.length() - 1)))
             input.setText(inputText + ".");
+        result.setText(getResult());
+        focusInput();
+    }
+
+    private void equals() {
+        String resultText = result.getText().toString();
+        if (!hasTwoOrMoreNumbers(input.getText().toString()) || resultText == "") return;
+
+        input.setText(resultText);
+        result.setVisibility(View.INVISIBLE);
+        openParenthesesCount = 0;
         focusInput();
     }
 
@@ -212,6 +298,7 @@ public class MainActivity extends AppCompatActivity {
             input.setText(result.toString());
         }
 
+        result.setText(getResult());
         focusInput();
     }
 
@@ -277,6 +364,8 @@ public class MainActivity extends AppCompatActivity {
         button8.setOnClickListener(v -> inputOperator('×'));
         button12.setOnClickListener(v -> inputOperator('-'));
         button16.setOnClickListener(v -> inputOperator('+'));
+
+        button20.setOnClickListener(v -> equals());
     }
 
     private void setButtonTouchListeners() {
@@ -355,10 +444,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void animateScale(View view, float scale) {
         view.animate()
-                .scaleX(scale)
-                .scaleY(scale)
-                .setDuration(50)
-                .start();
+            .scaleX(scale)
+            .scaleY(scale)
+            .setDuration(50)
+            .start();
     }
 
     private void vibrate() {
